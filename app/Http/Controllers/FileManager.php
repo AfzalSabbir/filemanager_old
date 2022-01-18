@@ -12,14 +12,27 @@ class FileManager extends Controller
     /**
      * @return JsonResponse
      */
+    public function getTree(): JsonResponse
+    {
+        $type     = request()->post('type');
+        $basePath = trim(request()->post('basePath') ?? '/', '/');
+        $disc     = $disc ?? 'local';
+
+        $response = $this->getFromStorage($basePath, $disc, $type);
+
+        return response()->json($response);
+    }
+
+    /**
+     * @return JsonResponse
+     */
     public function getDirectories(): JsonResponse
     {
         $basePath = trim(request()->post('basePath') ?? '/', '/');
         $disc     = $disc ?? 'local';
-        return response()->json([
-            $basePath,
+        return response()->json(
             $this->getFromStorage($basePath, $disc, 'directories')
-        ]);
+        );
     }
 
     /**
@@ -29,10 +42,9 @@ class FileManager extends Controller
     {
         $basePath = trim(request()->post('basePath') ?? '/', '/');
         $disc     = $disc ?? 'local';
-        return response()->json([
-            $basePath,
+        return response()->json(
             $this->getFromStorage($basePath, $disc, 'files')
-        ]);
+        );
     }
 
     /**
@@ -42,10 +54,9 @@ class FileManager extends Controller
     {
         $basePath = trim(request()->post('basePath') ?? '/', '/');
         $disc     = $disc ?? 'local';
-        return response()->json([
-            $basePath,
+        return response()->json(
             $this->getFromStorage($basePath, $disc)
-        ]);
+        );
     }
 
     /**

@@ -22,3 +22,5 @@ Route::get('/', function () {
 Route::match(['get', 'post'], '/get-directories', [FileManager::class, 'getDirectories']);
 Route::match(['get', 'post'], '/get-files', [FileManager::class, 'getFiles']);
 Route::match(['get', 'post'], '/get-files-directories', [FileManager::class, 'getFilesDirectories']);
+
+Route::post('/get-tree', [FileManager::class, 'getTree']);
