@@ -13,13 +13,18 @@
         <div class="card card-fluid">
             <!-- .card-body -->
             <div class="card-body">
-                <h4 class="card-title"> Ajax </h4><!-- #jstree3 -->
-                <div id="jstree3"></div><!-- /#jstree3 -->
+                <h4 class="card-title"> Filemanager </h4><!-- #jstree3 -->
+                <div id="jstreeFilemanager"></div><!-- /#jstree3 -->
             </div><!-- /.card-body -->
         </div><!-- /.card -->
     </div><!-- grid column -->
 @endsection
 
 @section('scripts')
+    <script>
+        axios.post('/get-tree').then(({data}) => {
+            console.log(data);
+        })
+    </script>
     @include('frontend.partials.owl-carousel.script')
 @endsection

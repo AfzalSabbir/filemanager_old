@@ -9,18 +9,24 @@ use Illuminate\Support\Str;
 
 class FileManager extends Controller
 {
+    private $response;
+    private $basePath;
+
     /**
      * @return JsonResponse
      */
     public function getTree(): JsonResponse
     {
-        $type     = request()->post('type');
-        $basePath = trim(request()->post('basePath') ?? '/', '/');
-        $disc     = $disc ?? 'local';
+        $type           = request()->post('type') ?? 'directories';
+        $isRoot         = (boolean)(request()->post('isRoot') ?? true);
+        $this->basePath = trim(request()->get('id') ?? '/', '/');
+        $disc           = $disc ?? 'local';
 
-        $response = $this->getFromStorage($basePath, $disc, $type);
+        $response = $this->getFromStorage($disc, $type)->addOptions();
+        if ($isRoot) $response = $response->addRootOptions();
+        $response = $response->getResponse();
 
-        return response()->json($response);
+        return response()->json([$response]);
     }
 
     /**
@@ -28,10 +34,10 @@ class FileManager extends Controller
      */
     public function getDirectories(): JsonResponse
     {
-        $basePath = trim(request()->post('basePath') ?? '/', '/');
-        $disc     = $disc ?? 'local';
+        $this->basePath = trim(request()->post('basePath') ?? '/', '/');
+        $disc           = $disc ?? 'local';
         return response()->json(
-            $this->getFromStorage($basePath, $disc, 'directories')
+            $this->getFromStorage($disc, 'directories')
         );
     }
 
@@ -40,10 +46,10 @@ class FileManager extends Controller
      */
     public function getFiles(): JsonResponse
     {
-        $basePath = trim(request()->post('basePath') ?? '/', '/');
-        $disc     = $disc ?? 'local';
+        $this->basePath = trim(request()->post('basePath') ?? '/', '/');
+        $disc           = $disc ?? 'local';
         return response()->json(
-            $this->getFromStorage($basePath, $disc, 'files')
+            $this->getFromStorage($disc, 'files')
         );
     }
 
@@ -52,56 +58,105 @@ class FileManager extends Controller
      */
     public function getFilesDirectories(): JsonResponse
     {
-        $basePath = trim(request()->post('basePath') ?? '/', '/');
-        $disc     = $disc ?? 'local';
+        $this->basePath = trim(request()->post('basePath') ?? '/', '/');
+        $disc           = $disc ?? 'local';
         return response()->json(
-            $this->getFromStorage($basePath, $disc)
+            $this->getFromStorage($disc)
         );
     }
 
     /**
-     * @param $basePath
      * @param string $disc
      * @param string $fetch
-     * @return array
+     * @return FileManager
      */
-    private function getFromStorage($basePath, string $disc = 'local', string $fetch = ''): array
+    private function getFromStorage(string $disc = 'local', string $fetch = ''): FileManager
     {
         switch ($fetch) {
             case 'directories' :
             {
-                $directories             = Storage::disk($disc)->directories($basePath);
-                $response['directories'] = $this->getTrim($basePath, $directories);
+                $directories             = Storage::disk($disc)->directories($this->basePath);
+                $response['directories'] = $this->getTrim($directories);
                 break;
             }
-            case 'files' :
+
+            case
+            'files' :
             {
-                $files             = Storage::disk($disc)->files($basePath);
-                $response['files'] = $this->getTrim($basePath, $files);
+                $files             = Storage::disk($disc)->files($this->basePath);
+                $response['files'] = $this->getTrim($files);
                 break;
             }
             default :
             {
-                $directories             = Storage::disk($disc)->directories($basePath);
-                $response['directories'] = $this->getTrim($basePath, $directories);
-                $files                   = Storage::disk($disc)->files($basePath);
-                $response['files']       = $this->getTrim($basePath, $files);
+                $directories             = Storage::disk($disc)->directories($this->basePath);
+                $response['directories'] = $this->getTrim($directories);
+                $files                   = Storage::disk($disc)->files($this->basePath);
+                $response['files']       = $this->getTrim($files);
                 break;
             }
         }
 
-        return $response;
+        $this->response = $response;
+
+        return $this;
     }
 
     /**
-     * @param $basePath
      * @param $paths
-     * @return array|string[]
+     * @return array
      */
-    private function getTrim($basePath, $paths): array
+    private function getTrim($paths): array
     {
-        return array_map(function ($file) use ($basePath) {
-            return Str::after($file, "$basePath/");
+        return array_map(function ($file) {
+            return Str::after($file, "$this->basePath/");
         }, $paths);
+    }
+
+    /**
+     * @return FileManager
+     */
+    private function addRootOptions(): FileManager
+    {
+        $this->response = [
+            "id"       => '/',
+            "text"     => "Storage",
+            "icon"     => "fa fa-hdd text-warning",
+            "state"    => [
+                "opened" => true
+            ],
+            "children" => $this->response['directories']
+        ];
+
+        return $this;
+    }
+
+    /**
+     * @return FileManager
+     */
+    private function addOptions(): FileManager
+    {
+        $this->response = collect($this->response)->map(function ($type) {
+            return collect($type)->map(function ($directory) {
+                return [
+                    "id"    => "/{$this->basePath}{$directory}",
+                    "text"  => $directory,
+                    "icon"  => "fa fa-folder text-warning",
+                    "state" => [
+                        "opened" => false
+                    ]
+                ];
+            })->toArray();
+        })->toArray();
+
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getResponse()
+    {
+        return $this->response;
     }
 }
